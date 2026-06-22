@@ -91,7 +91,6 @@ def mostrar_analise(dados_df, pergunta, hipotese, coluna_grupo, eixo_x, titulo_g
         ].round(2),
         use_container_width=True,
     )
-
     st.subheader("Gráfico interativo")
     st.caption("Passe o mouse sobre as barras para ver os valores exatos.")
     fig = criar_grafico(tabela, coluna_grupo, eixo_x, titulo_grafico, cores, label_y=label_y)
@@ -123,9 +122,11 @@ with st.expander("🛠️ Ver dados tratados usados nesta análise"):
     st.dataframe(dados.head(), use_container_width=True)
 
 st.divider()
-aba_medicamentos, aba_especialidades, aba_internacoes, aba_urgencias = st.tabs([
+aba_medicamentos, aba_especialidades,aba_genero,aba_diagnosticos, aba_internacoes, aba_urgencias = st.tabs([
     "3. Medicamentos (H3)",
     "4. Especialidades Médicas (H4)",
+    "5. Internação por gênero",
+    "6. Diagnósticos anteriores",
     "7. Internações anteriores", 
     "8. Urgências anteriores"
 ])
@@ -308,6 +309,63 @@ with aba_especialidades:
         **Conclusão:** A hipótese é **confirmada**. A especialidade médica do atendimento reflete a complexidade clínica de base e a severidade da doença crônica do paciente, o que possui impacto direto sobre as chances de uma reinternação rápida.
         """)
 
+
+#5. ABA GENERO (Lavínia)
+with aba_genero:
+    mostrar_analise(
+        dados_df=dados,
+        pergunta="Existe diferença na taxa de reinternação entre homens e mulheres?",
+        hipotese="As taxas de reinternação variam entre os sexos.",
+        coluna_grupo="genero",
+        eixo_x="Gênero",
+        titulo_grafico="Genero x taxa de Reinternação",
+        cores={"Feminino": "#b44c43", "Masculino": "#2f4f4f"}
+   )
+    taxa_sexo = dados.groupby('genero')['readmitido'].mean() * 100
+    st.info(f"Taxa de sobrevivência Feminina: **{taxa_sexo['Feminino']:.1f}%** | Masculina: **{taxa_sexo['Masculino']:.1f}%**\n\n Ao verificar as taxas de reintenação de homens e mulheres, nota-se uma variação pequena, confirmando a hipótese de que há variação, mas não é uma diferença significativa.")
+    
+
+
+#5. ABA DIAGNOSTICO (Lavínia)
+with aba_diagnosticos:
+    pergunta = "Pacientes com mais diagnósticos registrados apresentam maior risco de reinternação?"
+    hipotese = "Quanto maior o número de diagnósticos, maior a probabilidade de reinternação."
+    st.subheader("Pergunta e hipótese")
+    st.markdown(f"**Pergunta:** {pergunta}")
+    st.markdown(f"**Hipótese:** {hipotese}")
+
+    fig = px.bar(
+        dados.groupby(['quantidade_diagnostico', 'readmitted'])
+             .size() # conta pacientes por combinação faixa+readmissão
+             .unstack(fill_value=0) # transforma 'readmitted' em colunas (vira tabela)
+             .pipe(lambda d: d.div(d.sum(axis=1), axis=0)).mul(100) #calcula a porcentagem de readmissão (ou a não readmissão)
+             .reset_index()# tira 'quantidade_diagnostico' do índice, vira coluna normal
+             .melt( 
+                 # "desempilha" as colunas de readmissão em linhas (formato longo), formando a coluna de readmissão, que guarda o "No", ">30" e "<30" e a coluna que guarda a procentagem de cada classificação por faixa etária
+                 id_vars='quantidade_diagnostico',  
+                 var_name='Readmissao',      
+                 value_name='Porcentagem'   
+        ),
+        x='quantidade_diagnostico', y='Porcentagem', color='Readmissao',
+        barmode='stack', #o stack permite que as barras fiquem uma em cima da outra, formando uma única barra dividade pela % de cada classificação de readmissão
+        text='Porcentagem',#coloca o valor da % na barra/cor correspondente
+        color_discrete_map={'NO': '#61AFB6', '>30': '#C1B312', '<30': '#B83F39'},
+        title="Distribuição completa de readmissão por faixa de diagnósticos"
+    )
+
+    fig.update_traces(texttemplate='%{text:.1f}%', textposition='inside',textfont=dict(color='white'))
+    st.plotly_chart(fig)
+    
+    st.info(
+    "Pacientes na faixa de **1-5 diagnósticos** têm aproximadamente **36%** de chance de "
+    "algum tipo de readmissão, enquanto pacientes na faixa de **11-15 diagnósticos** "
+    "apresentam aproximadamente **56%** — um aumento de cerca de **20 pontos percentuais**.\n\n  "
+    "Pacientes da faixa intermediária, **6-10**, apresentam **49%** de chance de readmissão"
+    )
+    
+    st.write("Ao observar o gráfico vemos que a hipótese se confirma. Conforme o grupo de diagnósticos anteriores aumenta, nota-se um aumento no número das reinternações >30 e <30 dias. Pode-se perceber com base nos dois extremos (1-5) e (11-15), onde há uma diferença de 20 pontos na taxa de não readmissão")
+    
+
 # 7. ABA INTERNAÇÕES (Gabriel)
 with aba_internacoes:
     mostrar_analise(
@@ -333,3 +391,4 @@ with aba_urgencias:
     )
 
 st.divider()
+
