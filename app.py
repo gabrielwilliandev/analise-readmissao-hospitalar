@@ -167,6 +167,7 @@ with aba_medicamentos:
         margin=dict(l=20, r=20, t=70, b=20),
         hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
     )
+
     st.plotly_chart(fig3b, use_container_width=True)
 
     with st.expander("📝 Conclusão – Hipótese 3"):
@@ -206,72 +207,39 @@ with aba_especialidades:
     tabela_esp = criar_tabela_resumo(dados_esp, 'medical_specialty', coluna_alvo='readmit_30d').sort_values('taxa_readmissao_pct', ascending=True)
     mediana_taxa = tabela_esp['taxa_readmissao_pct'].median()
     tabela_esp['Destaque'] = tabela_esp['taxa_readmissao_pct'].apply(lambda x: 'Acima da Mediana' if x >= mediana_taxa else 'Abaixo da Mediana')
+
+    st.subheader("Taxa de readmissão < 30 dias por especialidade")        
+    fig4a = px.bar(
+        tabela_esp,
+        x='taxa_readmissao_pct',
+        y='medical_specialty',
+        orientation='h',
+        title=f"Readmissão < 30 dias pelas Top {n_esp} Especialidades",
+        labels={
+            'taxa_readmissao_pct': 'Taxa de Readmissão < 30d (%)', 
+            'medical_specialty': 'Especialidade',
+            'total_pacientes': 'Total de pacientes',
+            'total_readmitidos': 'Total readmitidos (<30d)'
+        },
+        color='Destaque',
+        color_discrete_map={'Acima da Mediana': '#E05C5C', 'Abaixo da Mediana': '#4C9BE8'},
+        hover_data={
+            'Destaque': False,
+            'medical_specialty': True,
+            'total_pacientes': ":,",
+            'total_readmitidos': ":,",
+            'taxa_readmissao_pct': ":.2f"
+        }
+    )
+    fig4a.add_vline(x=mediana_taxa, line_dash="dash", line_color="gray", annotation_text=f"Mediana: {mediana_taxa:.1f}%")
     
-    col_h4a, col_h4b = st.columns(2)
+    fig4a.update_layout(
+        margin=dict(l=20, r=20, t=70, b=20),
+        hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
+    )
     
-    with col_h4a:
-        st.subheader("Taxa de readmissão < 30 dias por especialidade")        
-        fig4a = px.bar(
-            tabela_esp,
-            x='taxa_readmissao_pct',
-            y='medical_specialty',
-            orientation='h',
-            title=f"Readmissão < 30 dias pelas Top {n_esp} Especialidades",
-            labels={
-                'taxa_readmissao_pct': 'Taxa de Readmissão < 30d (%)', 
-                'medical_specialty': 'Especialidade',
-                'total_pacientes': 'Total de pacientes',
-                'total_readmitidos': 'Total readmitidos (<30d)'
-            },
-            color='Destaque',
-            color_discrete_map={'Acima da Mediana': '#E05C5C', 'Abaixo da Mediana': '#4C9BE8'},
-            hover_data={
-                'Destaque': False,
-                'medical_specialty': True,
-                'total_pacientes': ":,",
-                'total_readmitidos': ":,",
-                'taxa_readmissao_pct': ":.2f"
-            }
-        )
-        fig4a.add_vline(x=mediana_taxa, line_dash="dash", line_color="gray", annotation_text=f"Mediana: {mediana_taxa:.1f}%")
-        
-        fig4a.update_layout(
-            margin=dict(l=20, r=20, t=70, b=20),
-            hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
-        )
-        st.plotly_chart(fig4a, use_container_width=True)
-        
-    with col_h4b:
-        st.subheader("Distribuição de todas as categorias de readmissão")        
-        dist_esp = dados_esp.groupby(['medical_specialty', 'readmitted'], observed=True).size().unstack(fill_value=0)
-        dist_esp_pct = dist_esp.div(dist_esp.sum(axis=1), axis=0).mul(100).reset_index()        
-        dist_long = dist_esp_pct.melt(id_vars='medical_specialty', var_name='Readmissao', value_name='Porcentagem')
-        
-        fig4b = px.bar(
-            dist_long,
-            x='Porcentagem',
-            y='medical_specialty',
-            color='Readmissao',
-            orientation='h',
-            title="Distribuição percentual completa do desfecho",
-            labels={
-                'Porcentagem': '% de Pacientes', 
-                'medical_specialty': 'Especialidade', 
-                'Readmissao': 'Desfecho'
-            },
-            color_discrete_map={'NO': '#4C9BE8', '>30': '#F0A500', '<30': '#E05C5C'},
-            hover_data={
-                'medical_specialty': True,
-                'Readmissao': True,
-                'Porcentagem': ':.2f'
-            }
-        )
-        
-        fig4b.update_layout(
-            margin=dict(l=20, r=20, t=70, b=20),
-            hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
-        )
-        st.plotly_chart(fig4b, use_container_width=True)
+    fig4a.update_layout(height=600)  # aumenta a altura
+    st.plotly_chart(fig4a, use_container_width=True)
 
     with st.expander("📋 Tabela resumo – Volume e taxas por especialidade"):
         resumo_tabela_entrega = (
