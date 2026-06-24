@@ -67,7 +67,7 @@ def criar_grafico(tabela, coluna_grupo, eixo_x, titulo, cores, label_y="Taxa de 
     fig.update_yaxes(range=[0, max(100, tabela["taxa_readmissao_pct"].max() * 1.15)])
     return fig
 
-def mostrar_analise(dados_df, pergunta, hipotese, coluna_grupo, eixo_x, titulo_grafico, cores, coluna_alvo="readmitido", label_y="Taxa de readmissão (%)"):
+def mostrar_analise(dados_df, pergunta, hipotese, coluna_grupo, eixo_x, titulo_grafico, cores, coluna_alvo="readmitido", label_y="Taxa de readmissão (%)", label_grupo = "grupo"):
     """Renderiza a estrutura padrão de perguntas, hipóteses, tabelas e gráficos."""
     st.subheader("Pergunta e hipótese")
     st.markdown(f"**Pergunta:** {pergunta}")
@@ -79,14 +79,14 @@ def mostrar_analise(dados_df, pergunta, hipotese, coluna_grupo, eixo_x, titulo_g
     st.dataframe(
         tabela.rename(
             columns={
-                coluna_grupo: "grupo",
+                coluna_grupo: label_grupo,
                 "total_pacientes": "total de pacientes",
                 "total_readmitidos": "total readmitidos",
                 "taxa_readmissao_pct": label_y.lower(),
             }
         )[
             [
-                "grupo",
+                label_grupo,
                 "total de pacientes",
                 "total readmitidos",
                 label_y.lower(),
@@ -171,7 +171,6 @@ dados = dados_filtrados
 # 1. ABA FAIXA ETÁRIA (Bianca)
 
 with aba_faixa_etaria:
-
     mostrar_analise(
         dados_df=dados,
         pergunta="Pacientes mais idosos apresentam maiores taxas de reinternação?",
@@ -183,7 +182,8 @@ with aba_faixa_etaria:
             "Até 30 anos": "#4C9BE8",
             "31-60 anos": "#F0A500",
             "Acima de 60 anos": "#E05C5C"
-        }
+        },
+        label_grupo="Idade"
     )
 
     st.divider()
@@ -226,12 +226,9 @@ with aba_faixa_etaria:
 
     with st.expander("📝 Conclusão – Hipótese 1"):
         st.markdown("""
-        **Resultado:** O gráfico permite comparar as taxas de readmissão
-        entre diferentes grupos etários.
+        **Resultado:** Observa-se um aumento gradual da taxa de readmissão conforme a faixa etária dos pacientes. Pacientes de até 30 anos apresentaram taxa de readmissão de 41,41%, enquanto pacientes entre 31 e 60 anos registraram 43,95%. Já os pacientes acima de 60 anos apresentaram a maior taxa, com 47,22%.
 
-        **Conclusão:** Caso os pacientes acima de 60 anos apresentem
-        maiores taxas de readmissão em menos de 30 dias, a hipótese é
-        confirmada.
+        **Conclusão:** A hipótese foi confirmada, pois os pacientes com mais de 60 anos apresentaram a maior taxa de readmissão entre os grupos analisados. Esse resultado sugere que o avanço da idade está associado a uma maior probabilidade de reinternação hospitalar, possivelmente devido à maior presença de doenças crônicas e à maior complexidade clínica desses pacientes.
         """)
 
 # 2. ABA TEMPO DE INTERNAÇÃO (Bianca)
@@ -249,7 +246,8 @@ with aba_tempo_internacao:
             "1-3 dias": "#4C9BE8",
             "4-7 dias": "#F0A500",
             "8-14 dias": "#E05C5C"
-        }
+        },
+        label_grupo="Dias"
     )
 
     st.divider()
@@ -292,13 +290,10 @@ with aba_tempo_internacao:
 
     with st.expander("📝 Conclusão – Hipótese 2"):
         st.markdown("""
-        **Resultado:** O gráfico mostra a distribuição das readmissões
-        de acordo com o tempo de permanência hospitalar.
+        **Resultado:** Observou-se que a taxa de readmissão aumenta conforme o tempo de permanência hospitalar. Pacientes internados por 1 a 3 dias apresentaram taxa de readmissão de 43,19%, enquanto aqueles que permaneceram entre 4 e 7 dias registraram 48,47%. Já os pacientes com tempo de internação entre 8 e 14 dias apresentaram a maior taxa, alcançando 49,62%.
 
-        **Conclusão:** Caso os grupos com maior tempo de internação
-        apresentem maiores taxas de readmissão, a hipótese é confirmada.
+        **Conclusão:** A hipótese foi confirmada, pois os pacientes que permaneceram mais tempo internados apresentaram maiores taxas de readmissão. Esse resultado sugere que internações mais longas podem estar associadas a condições clínicas mais complexas, aumentando a probabilidade de reinternação após a alta hospitalar.
         """)
-
 
 # 3. ABA MEDICAMENTOS (Lucas)
 with aba_medicamentos:
@@ -311,7 +306,8 @@ with aba_medicamentos:
         titulo_grafico="Readmissão em < 30 dias por faixa de medicamentos",
         cores={label: "#E05C5C" for label in ['1-5', '6-10', '11-15', '16-20', '21-30', '31+']},
         coluna_alvo="readmit_30d",
-        label_y="Taxa de readmissão < 30 dias (%)"
+        label_y="Taxa de readmissão < 30 dias (%)",
+        label_grupo="quantidade de medicamentos inseridos"
     )
     
     st.divider()
@@ -330,7 +326,7 @@ with aba_medicamentos:
         color='desfecho_pt',
         color_discrete_map={'Sem readmissão': '#4C9BE8', 'Readmissão < 30 dias': '#E05C5C', 'Readmissão > 30 dias': '#F0A500'}
     )
-    fig3b.update_traces(texttemplate='%.1f', textposition='outside')
+    #fig3b.update_traces(texttemplate='%.1f', textposition='outside')
     fig3b.update_layout(
         showlegend=False, 
         margin=dict(l=20, r=20, t=70, b=20),
@@ -488,7 +484,8 @@ with aba_genero:
         coluna_grupo="genero",
         eixo_x="Gênero",
         titulo_grafico="Genero x taxa de Reinternação",
-        cores={"Feminino": "#b44c43", "Masculino": "#2f4f4f"}
+        cores={"Feminino": "#b44c43", "Masculino": "#2f4f4f"},
+        label_grupo="Gênero"
    )
     taxa_sexo = dados.groupby('genero')['readmitido'].mean() * 100
 
@@ -548,7 +545,8 @@ with aba_internacoes:
         coluna_grupo="teve_internacao",
         eixo_x="Teve internação anterior?",
         titulo_grafico="Taxa de readmissão por histórico de internação",
-        cores={"Nao": "#2563EB", "Sim": "#DC2626"}
+        cores={"Nao": "#2563EB", "Sim": "#DC2626"},
+        label_grupo="Utilizaram pronto-socorro ?"
     )
 
 # 8. ABA URGÊNCIAS (Gabriel)
@@ -560,7 +558,8 @@ with aba_urgencias:
         coluna_grupo="teve_urgencia",
         eixo_x="Teve urgência anterior?",
         titulo_grafico="Taxa de readmissão por histórico de urgência",
-        cores={"Nao": "#059669", "Sim": "#D97706"}
+        cores={"Nao": "#059669", "Sim": "#D97706"},
+        label_grupo="Utilizaram pronto-socorro ?"
     )
 
 st.divider()
