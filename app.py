@@ -2,7 +2,10 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 import numpy as np
-from analise_arquivo import carregar_e_preparar_dados_unificados, top_especialidades
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.colors as mcolors
+from analise_arquivo import carregar_e_preparar_dados_unificados, top_especialidades, analisar_glicemia_reinternacao, calcular_dados_conversao_hba1c,calcular_matriz_correlacao_multivariada
 
 st.set_page_config(
     page_title="Análise de Readmissão Hospitalar",
@@ -122,14 +125,43 @@ with st.expander("🛠️ Ver dados tratados usados nesta análise"):
     st.dataframe(dados.head(), use_container_width=True)
 
 st.divider()
-aba_medicamentos, aba_especialidades,aba_genero,aba_diagnosticos, aba_internacoes, aba_urgencias = st.tabs([
+aba_medicamentos, aba_especialidades, aba_genero, aba_diagnosticos, aba_internacoes, aba_urgencias, aba_glicemia, aba_correlacao, = st.tabs([
     "3. Medicamentos (H3)",
     "4. Especialidades Médicas (H4)",
     "5. Internação por gênero",
     "6. Diagnósticos anteriores",
     "7. Internações anteriores", 
-    "8. Urgências anteriores"
+    "8. Urgências anteriores",
+    "9. Controle Glicêmico ",
+    "10. Matriz de Correlação "
 ])
+
+
+#  CONFIGURAÇÃO DOS FILTROS NA SIDEBAR 
+
+st.sidebar.header("Filtros de Análise")
+
+lista_idades = ["Todos"] + sorted(list(dados['age'].unique()))
+idade_sel = st.sidebar.selectbox("Faixa Etária (age):", lista_idades)
+
+lista_generos = ["Todos"] + sorted(list(dados['genero'].unique()))
+genero_sel = st.sidebar.selectbox("Gênero (gender):", lista_generos)
+
+lista_racas = ["Todos"] + sorted(list(dados['race'].unique()))
+raca_sel = st.sidebar.selectbox("Raça/Etnia (race):", lista_racas)
+
+dados_filtrados = dados.copy()
+
+if idade_sel != "Todos":
+    dados_filtrados = dados_filtrados[dados_filtrados['age'] == idade_sel]
+
+if genero_sel != "Todos":
+    dados_filtrados = dados_filtrados[dados_filtrados['genero'] == genero_sel]
+
+if raca_sel != "Todos":
+    dados_filtrados = dados_filtrados[dados_filtrados['race'] == raca_sel]
+
+dados = dados_filtrados
 
 # 3. ABA MEDICAMENTOS (Lucas)
 with aba_medicamentos:
@@ -167,7 +199,6 @@ with aba_medicamentos:
         margin=dict(l=20, r=20, t=70, b=20),
         hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
     )
-
     st.plotly_chart(fig3b, use_container_width=True)
 
     with st.expander("📝 Conclusão – Hipótese 3"):
@@ -207,39 +238,72 @@ with aba_especialidades:
     tabela_esp = criar_tabela_resumo(dados_esp, 'medical_specialty', coluna_alvo='readmit_30d').sort_values('taxa_readmissao_pct', ascending=True)
     mediana_taxa = tabela_esp['taxa_readmissao_pct'].median()
     tabela_esp['Destaque'] = tabela_esp['taxa_readmissao_pct'].apply(lambda x: 'Acima da Mediana' if x >= mediana_taxa else 'Abaixo da Mediana')
-
-    st.subheader("Taxa de readmissão < 30 dias por especialidade")        
-    fig4a = px.bar(
-        tabela_esp,
-        x='taxa_readmissao_pct',
-        y='medical_specialty',
-        orientation='h',
-        title=f"Readmissão < 30 dias pelas Top {n_esp} Especialidades",
-        labels={
-            'taxa_readmissao_pct': 'Taxa de Readmissão < 30d (%)', 
-            'medical_specialty': 'Especialidade',
-            'total_pacientes': 'Total de pacientes',
-            'total_readmitidos': 'Total readmitidos (<30d)'
-        },
-        color='Destaque',
-        color_discrete_map={'Acima da Mediana': '#E05C5C', 'Abaixo da Mediana': '#4C9BE8'},
-        hover_data={
-            'Destaque': False,
-            'medical_specialty': True,
-            'total_pacientes': ":,",
-            'total_readmitidos': ":,",
-            'taxa_readmissao_pct': ":.2f"
-        }
-    )
-    fig4a.add_vline(x=mediana_taxa, line_dash="dash", line_color="gray", annotation_text=f"Mediana: {mediana_taxa:.1f}%")
     
-    fig4a.update_layout(
-        margin=dict(l=20, r=20, t=70, b=20),
-        hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
-    )
+    col_h4a, col_h4b = st.columns(2)
     
-    fig4a.update_layout(height=600)  # aumenta a altura
-    st.plotly_chart(fig4a, use_container_width=True)
+    with col_h4a:
+        st.subheader("Taxa de readmissão < 30 dias por especialidade")        
+        fig4a = px.bar(
+            tabela_esp,
+            x='taxa_readmissao_pct',
+            y='medical_specialty',
+            orientation='h',
+            title=f"Readmissão < 30 dias pelas Top {n_esp} Especialidades",
+            labels={
+                'taxa_readmissao_pct': 'Taxa de Readmissão < 30d (%)', 
+                'medical_specialty': 'Especialidade',
+                'total_pacientes': 'Total de pacientes',
+                'total_readmitidos': 'Total readmitidos (<30d)'
+            },
+            color='Destaque',
+            color_discrete_map={'Acima da Mediana': '#E05C5C', 'Abaixo da Mediana': '#4C9BE8'},
+            hover_data={
+                'Destaque': False,
+                'medical_specialty': True,
+                'total_pacientes': ":,",
+                'total_readmitidos': ":,",
+                'taxa_readmissao_pct': ":.2f"
+            }
+        )
+        fig4a.add_vline(x=mediana_taxa, line_dash="dash", line_color="gray", annotation_text=f"Mediana: {mediana_taxa:.1f}%")
+        
+        fig4a.update_layout(
+            margin=dict(l=20, r=20, t=70, b=20),
+            hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
+        )
+        st.plotly_chart(fig4a, use_container_width=True)
+        
+    with col_h4b:
+        st.subheader("Distribuição de todas as categorias de readmissão")        
+        dist_esp = dados_esp.groupby(['medical_specialty', 'readmitted'], observed=True).size().unstack(fill_value=0)
+        dist_esp_pct = dist_esp.div(dist_esp.sum(axis=1), axis=0).mul(100).reset_index()        
+        dist_long = dist_esp_pct.melt(id_vars='medical_specialty', var_name='Readmissao', value_name='Porcentagem')
+        
+        fig4b = px.bar(
+            dist_long,
+            x='Porcentagem',
+            y='medical_specialty',
+            color='Readmissao',
+            orientation='h',
+            title="Distribuição percentual completa do desfecho",
+            labels={
+                'Porcentagem': '% de Pacientes', 
+                'medical_specialty': 'Especialidade', 
+                'Readmissao': 'Desfecho'
+            },
+            color_discrete_map={'NO': '#4C9BE8', '>30': '#F0A500', '<30': '#E05C5C'},
+            hover_data={
+                'medical_specialty': True,
+                'Readmissao': True,
+                'Porcentagem': ':.2f'
+            }
+        )
+        
+        fig4b.update_layout(
+            margin=dict(l=20, r=20, t=70, b=20),
+            hoverlabel=dict(bgcolor="black", font_color="white", font_size=13)
+        )
+        st.plotly_chart(fig4b, use_container_width=True)
 
     with st.expander("📋 Tabela resumo – Volume e taxas por especialidade"):
         resumo_tabela_entrega = (
@@ -290,7 +354,11 @@ with aba_genero:
         cores={"Feminino": "#b44c43", "Masculino": "#2f4f4f"}
    )
     taxa_sexo = dados.groupby('genero')['readmitido'].mean() * 100
-    st.info(f"Taxa de sobrevivência Feminina: **{taxa_sexo['Feminino']:.1f}%** | Masculina: **{taxa_sexo['Masculino']:.1f}%**\n\n Ao verificar as taxas de reintenação de homens e mulheres, nota-se uma variação pequena, confirmando a hipótese de que há variação, mas não é uma diferença significativa.")
+
+    taxa_fem = taxa_sexo.get('Feminino', 0.0)
+    taxa_masc = taxa_sexo.get('Masculino', 0.0)
+
+    st.info(f"Taxa de sobrevivência Feminina: **{taxa_fem:.1f}%** | Masculina: **{taxa_masc:.1f}%**\n\n Ao verificar as taxas de reintenação de homens e mulheres, nota-se uma variação pequena, confirmando a hipótese de que há variação, mas não é uma diferença significativa.")
     
 
 
@@ -360,3 +428,91 @@ with aba_urgencias:
 
 st.divider()
 
+
+
+cores_customizadas = ["#ffaa00", "#7c8dbf", "#520052"] 
+cmap_marilinda = mcolors.LinearSegmentedColormap.from_list("marilinda_dark", cores_customizadas)
+
+#  9. ABA GLICEMIA (Marilinda s2)
+
+with aba_glicemia:
+    st.header("🔬 Cruzamento: Glicemia Média vs Reinternação")
+    txt_tabela = analisar_glicemia_reinternacao(dados)
+    pergunta = "O controle glicêmico influencia a taxa de reinternação? "
+    hipotese = "Pacientes com resultados alterados de HbA1c possuem maior probabilidade de reinternação."
+    st.subheader("Pergunta e hipótese")
+    st.markdown(f"**Pergunta:** {pergunta}")
+    st.markdown(f"**Hipótese:** {hipotese}")
+    
+    plt.style.use('dark_background')
+    fig_m1, ax_m1 = plt.subplots(figsize=(7, 4))
+    
+    anotacoes_pct = txt_tabela.map(lambda x: f"{x:.1f}%").values
+    
+    sns.heatmap(
+        txt_tabela, 
+        annot=anotacoes_pct, 
+        fmt="", 
+        cmap=cmap_marilinda, 
+        linewidths=1.5,
+        linecolor="#111111",
+        annot_kws={'color': '#ffffff', 'weight': 'bold', 'size': 11},
+        cbar_kws={'label': 'Porcentagem (%)'}, 
+        ax=ax_m1
+    )
+    
+    ax_m1.set_title("Influência da Glicemia Média na Taxa de Reinternação", color='white', pad=15, weight='bold')
+    ax_m1.set_xlabel("Paciente Reinternado?", color='white', labelpad=10)
+    ax_m1.set_ylabel("Estimativa de Glicemia Média Diária", color='white', labelpad=10)
+    
+    plt.tight_layout()
+    st.pyplot(fig_m1)
+    plt.close(fig_m1)
+    
+    st.markdown("---")
+    st.subheader("🔬 Entendendo os Números da HbA1c")
+    df_conversao = calcular_dados_conversao_hba1c()
+    st.table(df_conversao)
+    
+    st.write("Ao observar o gráfico vemos que a hipótese se confirma. O gráfico mostra que mais de 45% dos pacientes com glicemia média acima de 197 mg/dL (HbA1c > 8) foram readmitidos. Isso sugere que o controle glicêmico é um fator importante na probabilidade de reinternação hospitalar.")
+
+
+ # 10. ABA CORRELAÇÃO (Marilinda s2)
+
+with aba_correlacao:
+    st.header("🧮 Matriz de Correlação Multivariada")
+    matriz_corr = calcular_matriz_correlacao_multivariada(dados)
+    pergunta = "Alterações na medicação para diabetes influenciam a ocorrência de reinternação? "
+    hipotese = "Pacientes que tiveram mudanças na medicação apresentam comportamento diferente em relação à reinternação."
+    st.subheader("Pergunta e hipótese")
+    st.markdown(f"**Pergunta:** {pergunta}")
+    st.markdown(f"**Hipótese:** {hipotese}")
+    
+    plt.style.use('dark_background')
+    fig_m2, ax_m2 = plt.subplots(figsize=(9, 7))
+   
+    sns.heatmap(
+        matriz_corr, 
+        annot=True, 
+        fmt=".2f", 
+        cmap=cmap_marilinda, 
+        vmin=-1, 
+        vmax=1, 
+        center=0, 
+        linewidths=1.5,
+        linecolor="#111111",
+        annot_kws={'color': '#ffffff', 'weight': 'bold', 'size': 10},
+        ax=ax_m2
+    )
+    
+    ax_m2.set_title("Matriz de Correlação Multivariada", color='white', pad=15, weight='bold')
+    plt.xticks(rotation=45, ha='right', color='white')
+    plt.yticks(color='white')
+    
+    plt.tight_layout()
+    st.pyplot(fig_m2)
+    plt.close(fig_m2)
+
+    st.write("Ao observar o gráfico vemos que a hipótese não se confirma. A matriz de correlação mostra que a alteração na medicação tem uma correlação muito baixa com a readmição, sugerindo que mudanças na medicação para diabetes não influenciam significativamente a ocorrência de reinternação hospitalar.Mas também analisamos que um paciente que já possui uma rotina de internações recorrentes tem uma probabilidade significativamente maior de ser reinternado do que um paciente de primeira viagem, indicando uma possível cronicidade ou severidade da doença que o hospital não está conseguindo estabilizar a longo prazo.")
+
+    
