@@ -125,7 +125,10 @@ with st.expander("🛠️ Ver dados tratados usados nesta análise"):
     st.dataframe(dados.head(), use_container_width=True)
 
 st.divider()
-aba_medicamentos, aba_especialidades, aba_genero, aba_diagnosticos, aba_internacoes, aba_urgencias, aba_glicemia, aba_correlacao, = st.tabs([
+
+aba_faixa_etaria, aba_tempo_internacao, aba_medicamentos, aba_especialidades, aba_genero, aba_diagnosticos, aba_internacoes, aba_urgencias, aba_glicemia, aba_correlacao, = st.tabs([
+    "1. Faixa Etária",
+    "2. Tempo de Internação",
     "3. Medicamentos (H3)",
     "4. Especialidades Médicas (H4)",
     "5. Internação por gênero",
@@ -135,6 +138,7 @@ aba_medicamentos, aba_especialidades, aba_genero, aba_diagnosticos, aba_internac
     "9. Controle Glicêmico ",
     "10. Matriz de Correlação "
 ])
+
 
 
 #  CONFIGURAÇÃO DOS FILTROS NA SIDEBAR 
@@ -162,6 +166,139 @@ if raca_sel != "Todos":
     dados_filtrados = dados_filtrados[dados_filtrados['race'] == raca_sel]
 
 dados = dados_filtrados
+
+
+# 1. ABA FAIXA ETÁRIA (Bianca)
+
+with aba_faixa_etaria:
+
+    mostrar_analise(
+        dados_df=dados,
+        pergunta="Pacientes mais idosos apresentam maiores taxas de reinternação?",
+        hipotese="Pacientes acima de 60 anos possuem maior probabilidade de serem reinternados em até 30 dias.",
+        coluna_grupo="faixa_etaria",
+        eixo_x="Faixa Etária",
+        titulo_grafico="Taxa de readmissão por faixa etária",
+        cores={
+            "Até 30 anos": "#4C9BE8",
+            "31-60 anos": "#F0A500",
+            "Acima de 60 anos": "#E05C5C"
+        }
+    )
+
+    st.divider()
+
+    st.subheader("Distribuição completa das categorias de readmissão")
+
+    dist_idade = (
+        dados.groupby(['faixa_etaria', 'readmitted'])
+        .size()
+        .unstack(fill_value=0)
+    )
+
+    dist_idade_pct = (
+        dist_idade.div(dist_idade.sum(axis=1), axis=0)
+        .mul(100)
+        .reset_index()
+    )
+
+    dist_long = dist_idade_pct.melt(
+        id_vars='faixa_etaria',
+        var_name='Readmissao',
+        value_name='Porcentagem'
+    )
+
+    fig_idade = px.bar(
+        dist_long,
+        x='Porcentagem',
+        y='faixa_etaria',
+        color='Readmissao',
+        orientation='h',
+        title='Distribuição percentual por faixa etária',
+        color_discrete_map={
+            'NO': '#4C9BE8',
+            '>30': '#F0A500',
+            '<30': '#E05C5C'
+        }
+    )
+
+    st.plotly_chart(fig_idade, use_container_width=True)
+
+    with st.expander("📝 Conclusão – Hipótese 1"):
+        st.markdown("""
+        **Resultado:** O gráfico permite comparar as taxas de readmissão
+        entre diferentes grupos etários.
+
+        **Conclusão:** Caso os pacientes acima de 60 anos apresentem
+        maiores taxas de readmissão em menos de 30 dias, a hipótese é
+        confirmada.
+        """)
+
+# 2. ABA TEMPO DE INTERNAÇÃO (Bianca)
+
+with aba_tempo_internacao:
+
+    mostrar_analise(
+        dados_df=dados,
+        pergunta="O tempo de permanência hospitalar influencia a chance de reinternação?",
+        hipotese="Pacientes que permanecem mais tempo internados apresentam maior probabilidade de reinternação.",
+        coluna_grupo="faixa_internacao",
+        eixo_x="Tempo de Internação",
+        titulo_grafico="Tempo de internação x readmissão",
+        cores={
+            "1-3 dias": "#4C9BE8",
+            "4-7 dias": "#F0A500",
+            "8-14 dias": "#E05C5C"
+        }
+    )
+
+    st.divider()
+
+    st.subheader("Distribuição completa das categorias de readmissão")
+
+    dist_tempo = (
+        dados.groupby(['faixa_internacao', 'readmitted'])
+        .size()
+        .unstack(fill_value=0)
+    )
+
+    dist_tempo_pct = (
+        dist_tempo.div(dist_tempo.sum(axis=1), axis=0)
+        .mul(100)
+        .reset_index()
+    )
+
+    dist_long = dist_tempo_pct.melt(
+        id_vars='faixa_internacao',
+        var_name='Readmissao',
+        value_name='Porcentagem'
+    )
+
+    fig_tempo = px.bar(
+        dist_long,
+        x='Porcentagem',
+        y='faixa_internacao',
+        color='Readmissao',
+        orientation='h',
+        title='Distribuição percentual por tempo de internação',
+        color_discrete_map={
+            'NO': '#4C9BE8',
+            '>30': '#F0A500',
+            '<30': '#E05C5C'
+        }
+    )
+
+    st.plotly_chart(fig_tempo, use_container_width=True)
+
+    with st.expander("📝 Conclusão – Hipótese 2"):
+        st.markdown("""
+        **Resultado:** O gráfico mostra a distribuição das readmissões
+        de acordo com o tempo de permanência hospitalar.
+
+        **Conclusão:** Caso os grupos com maior tempo de internação
+        apresentem maiores taxas de readmissão, a hipótese é confirmada.
+        """)
+
 
 # 3. ABA MEDICAMENTOS (Lucas)
 with aba_medicamentos:

@@ -5,6 +5,7 @@ def carregar_e_preparar_dados_unificados():
     df = pd.read_csv("diabetic_data.csv")
     
     # Seleção de todas as colunas necessárias para ambas as partes
+
     colunas_foco = [
     "encounter_id", 
     "readmitted", 
@@ -23,6 +24,7 @@ def carregar_e_preparar_dados_unificados():
     "age",
     "race"
 ]
+
     dados = df[colunas_foco].copy()
     
     # --- Limpeza e Padronização ---
@@ -75,7 +77,42 @@ def carregar_e_preparar_dados_unificados():
     
     dados['quantidade_diagnostico'] = pd.cut(dados['number_diagnoses'], bins=bins, labels=qtde_diag)
     
-    
+    # --- Engenharia de Recursos (Parte Bianca) ---
+    #print(dados.columns.tolist())
+    #print(dados[['age']].head())
+    # Agrupamento das faixas etárias
+    # --- Engenharia de Recursos (Parte Bianca) ---
+
+# Agrupamento das faixas etárias
+    dados['faixa_etaria'] = dados['age'].replace({
+        '[0-10)': 'Até 30 anos',
+        '[10-20)': 'Até 30 anos',
+        '[20-30)': 'Até 30 anos',
+
+        '[30-40)': '31-60 anos',
+        '[40-50)': '31-60 anos',
+        '[50-60)': '31-60 anos',
+
+        '[60-70)': 'Acima de 60 anos',
+        '[70-80)': 'Acima de 60 anos',
+        '[80-90)': 'Acima de 60 anos',
+        '[90-100)': 'Acima de 60 anos'
+    })
+
+    # Agrupamento do tempo de internação
+    dados['faixa_internacao'] = pd.cut(
+        dados['time_in_hospital'],
+        bins=[0, 3, 7, 14],
+        labels=[
+            '1-3 dias',
+            '4-7 dias',
+            '8-14 dias'
+        ]
+    )
+
+    # Verificação
+    print(dados.columns.tolist())
+    print(dados[['age', 'faixa_etaria']].head())
     
     return df, dados
 
@@ -89,7 +126,7 @@ def top_especialidades(df, n=10):
         .index
         .tolist()
     )
-
+#Parte Marilinda
 def analisar_glicemia_reinternacao(df):
     """Realiza o cruzamento estatístico entre Glicemia e Reinternação."""
     df_local = df.copy()
