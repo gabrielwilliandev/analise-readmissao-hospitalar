@@ -492,7 +492,7 @@ with aba_genero:
     taxa_fem = taxa_sexo.get('Feminino', 0.0)
     taxa_masc = taxa_sexo.get('Masculino', 0.0)
 
-    st.info(f"Taxa de sobrevivência Feminina: **{taxa_fem:.1f}%** | Masculina: **{taxa_masc:.1f}%**\n\n Ao verificar as taxas de reintenação de homens e mulheres, nota-se uma variação pequena, confirmando a hipótese de que há variação, mas não é uma diferença significativa.")
+    st.info(f"Taxa de reinternação Feminina: **{taxa_fem:.1f}%** | Masculina: **{taxa_masc:.1f}%**\n\n Ao verificar as taxas de reintenação de homens e mulheres, nota-se uma variação pequena, confirmando a hipótese de que há variação, mas não é uma diferença significativa.")
     
 
 
@@ -527,13 +527,10 @@ with aba_diagnosticos:
     st.plotly_chart(fig)
     
     st.info(
-    "Pacientes na faixa de **1-5 diagnósticos** têm aproximadamente **36%** de chance de "
-    "algum tipo de readmissão, enquanto pacientes na faixa de **11-15 diagnósticos** "
-    "apresentam aproximadamente **56%** — um aumento de cerca de **20 pontos percentuais**.\n\n  "
-    "Pacientes da faixa intermediária, **6-10**, apresentam **49%** de chance de readmissão"
+    "**A hipótese se confirma**: conforme o número de diagnósticos anteriores aumenta, a taxa de readmissão também aumenta.  "
+    "A proporção de pacientes não readmitidos cai de 64.5% (1-5 diagnósticos) para 43.4% (11-15 diagnósticos).\n\n"
+    "O destaque fica na readmissão rápida (<30 dias), que mais que dobra entre os extremos, de 8.5% para 18.9%, indicando que pacientes com mais diagnósticos não só reinternam mais, como reinternam mais rápido."
     )
-    
-    st.write("Ao observar o gráfico vemos que a hipótese se confirma. Conforme o grupo de diagnósticos anteriores aumenta, nota-se um aumento no número das reinternações >30 e <30 dias. Pode-se perceber com base nos dois extremos (1-5) e (11-15), onde há uma diferença de 20 pontos na taxa de não readmissão")
     
 
 # 7. ABA INTERNAÇÕES (Gabriel)
